@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-'
+
 project(MeuProjeto LANGUAGES C)
 
 set(CMAKE_C_FLAGS_DEBUG  "${CMAKE_C_FLAGS_DEBUG} -g -O0")
