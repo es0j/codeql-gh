@@ -1,15 +1,38 @@
-name: Semgrep CI
-on: [push]
+name: Semgrep Security Scan
+
+on:
+  # Botão manual no GitHub Actions
+  workflow_dispatch:
+
+  # Cron (domingo às 03:00 UTC)
+  schedule:
+    - cron: '0 3 * * 0'
+  push:
+    branches: [main, develop, feature/sast]
 
 jobs:
   semgrep:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Run Semgrep CI
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      # Enable only after setting github team and comment above scan
+      - name: Run Semgrep scan (offline)
         run: |
-          pip install semgrep
-          semgrep ci
-        env:
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+          semgrep scan \
+          --config=p/security-audit \
+          --sarif \
+          --output semgrep.sarif \
+          .
+
+      
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
