@@ -47,18 +47,6 @@ jobs:
       #    category: semgrep
 
 
-      - name: Comment on PR
-        if: steps.semgrep.outcome == 'failure'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: "❌ **Semgrep encontrou vulnerabilidades críticas**"
-            })
-
       - name: Fail job
         if: steps.semgrep.outcome == 'failure'
         run: exit 1
