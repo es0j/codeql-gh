@@ -1,0 +1,64 @@
+name: Semgrep Security Scan free
+
+on:
+  # Botão manual no GitHub Actions
+  workflow_dispatch:
+
+  # Cron (domingo às 03:00 UTC)
+  schedule:
+    - cron: '0 3 * * 0'
+  push:
+    branches: [main, develop, feature/sast]
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep scan (offline)
+        id: semgrep
+        continue-on-error: true
+        run: |
+          semgrep scan \
+            --config=p/security-audit \
+            --severity ERROR \
+            --error \
+            --sarif \
+            --output semgrep.sarif \
+            .
+
+      - name: generate sarif artifact
+        uses:  actions/upload-artifact@v4
+        with:
+          name: semgrep.sarif
+          path: semgrep.sarif
+      
+      # enable only after configuring codeql properly
+      #- name: Upload SARIF results
+      #  uses: github/codeql-action/upload-sarif@v3
+      #  with:
+      #    sarif_file: semgrep.sarif
+      #    category: semgrep
+
+
+      - name: Comment on PR
+        if: steps.semgrep.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: "❌ **Semgrep encontrou vulnerabilidades críticas**"
+            })
+
+      - name: Fail job
+        if: steps.semgrep.outcome == 'failure'
+        run: exit 1
